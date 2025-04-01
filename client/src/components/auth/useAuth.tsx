@@ -28,8 +28,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Query to fetch current user
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['/api/auth/current-user'],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest('GET', '/api/auth/current-user');
+        if (res.status === 401) {
+          // Return null for unauthorized but don't throw an error
+          return null;
+        }
+        return res.json();
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+        return null;
+      }
+    },
     retry: false,
-    staleTime: 1000 * 60 * 60, // 1 hour
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   // Set user when data changes
@@ -49,6 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (userData) => {
       setUser(userData);
+      // Immediately refetch current user data to update auth state
+      refetch();
       toast({
         title: "Login successful",
         description: `Welcome back, ${userData.username}!`,
@@ -72,6 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (userData) => {
       setUser(userData);
+      // Immediately refetch current user data to update auth state
+      refetch();
       toast({
         title: "Registration successful",
         description: `Welcome, ${userData.username}!`,

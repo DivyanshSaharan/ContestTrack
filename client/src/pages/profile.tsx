@@ -11,13 +11,6 @@ export default function ProfilePage() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Redirect to login if not authenticated and not loading
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      setLocation("/");
-    }
-  }, [isLoading, isAuthenticated, setLocation]);
-
   // Show loading state
   if (isLoading) {
     return (
@@ -29,9 +22,29 @@ export default function ProfilePage() {
     );
   }
 
-  // If user is not authenticated, don't render the profile
+  // Redirect to home if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      console.log("Not authenticated, redirecting to home");
+      setLocation("/");
+    }
+  }, [isLoading, isAuthenticated, setLocation]);
+
+  // If user is not authenticated, show message instead of redirecting immediately
   if (!isAuthenticated || !user) {
-    return null;
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col justify-center items-center h-48">
+          <p className="text-xl font-medium mb-2">Please log in to view your profile</p>
+          <button 
+            onClick={() => setLocation("/")}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md"
+          >
+            Go to Home
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -73,7 +73,7 @@ export function MarkedContestsMenu() {
           <div className="flex flex-col">
             <span className="text-sm font-medium">{contest.name}</span>
             <span className="text-xs text-muted-foreground">
-              Starts {formatTimeRemaining(contest.startTime)}
+              Starts {formatTimeRemaining(contest.startTime.toString())}
             </span>
           </div>
         </DropdownMenuItem>
