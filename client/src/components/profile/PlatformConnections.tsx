@@ -139,14 +139,14 @@ export default function PlatformConnections({ userId }: PlatformConnectionsProps
   };
 
   // Get platform icon
-  const renderPlatformIcon = (platform: string, size = 5) => {
+  const renderPlatformIcon = (platform: string) => {
     switch (platform.toLowerCase()) {
       case 'codeforces':
-        return <SiCodeforces className={`h-${size} w-${size} text-red-500`} />;
+        return <SiCodeforces className="h-5 w-5 text-red-500" />;
       case 'codechef':
-        return <SiCodechef className={`h-${size} w-${size} text-amber-600`} />;
+        return <SiCodechef className="h-5 w-5 text-amber-600" />;
       case 'leetcode':
-        return <SiLeetcode className={`h-${size} w-${size} text-yellow-500`} />;
+        return <SiLeetcode className="h-5 w-5 text-yellow-500" />;
       default:
         return null;
     }
