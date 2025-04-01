@@ -228,10 +228,19 @@ export async function fetchLeetcodeContests(): Promise<InsertContest[]> {
         nextBiweeklyDate.setDate(now.getDate() + (6 - now.getDay() + 14) % 14); // Saturday after next
         nextBiweeklyDate.setHours(14, 30, 0, 0); // 2:30 PM UTC
         
-        // Current Weekly contest number is 444 as of April 2025
-        // We add a calculated offset based on current date
-        const weeklyContestNumber = 444;
-        const biweeklyContestNumber = 154;
+        // Base contest numbers as of April 1, 2025
+        // Weekly Contest 444 and Biweekly Contest 154
+        const baseWeeklyNumber = 444;
+        const baseBiweeklyNumber = 154;
+        const baseDate = new Date(2025, 3, 1); // April 1, 2025
+        
+        // Calculate weeks since base date for weekly contests (happens every week)
+        const weeksSinceBase = Math.floor((now.getTime() - baseDate.getTime()) / (7 * 24 * 60 * 60 * 1000));
+        const weeklyContestNumber = baseWeeklyNumber + weeksSinceBase;
+        
+        // Calculate biweekly contests (happens every two weeks)
+        const biweeklySinceBase = Math.floor(weeksSinceBase / 2);
+        const biweeklyContestNumber = baseBiweeklyNumber + biweeklySinceBase;
         
         // Duration - typically 90 minutes
         const contestDuration = 90 * 60 * 1000;
