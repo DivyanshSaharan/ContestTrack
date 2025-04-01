@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Platform } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
@@ -16,89 +15,84 @@ export default function ContestFilter({
   onTabChange
 }: ContestFilterProps) {
   
-  // Helper function to check if a platform is selected
-  const isPlatformSelected = (platform: Platform) => {
-    return selectedPlatforms.includes(platform);
-  };
-
-  // Helper function to check if all platforms are selected
+  // Helper to determine if "All" is active
   const isAllSelected = () => {
-    return selectedPlatforms.length === 3; // codeforces, codechef, leetcode
+    return selectedPlatforms.length === 3; // All 3 platforms selected
   };
 
-  // Toggle a platform selection
-  const togglePlatform = (platform: Platform) => {
-    if (isPlatformSelected(platform)) {
-      // If platform is already selected, remove it
-      onPlatformsChange(selectedPlatforms.filter(p => p !== platform));
-    } else {
-      // If platform is not selected, add it
-      onPlatformsChange([...selectedPlatforms, platform]);
-    }
+  // Helper to determine if a single platform is exclusively selected
+  const isOnlyPlatformSelected = (platform: Platform) => {
+    return selectedPlatforms.length === 1 && selectedPlatforms.includes(platform);
   };
 
-  // Select all platforms
+  // Set platform filters
   const selectAllPlatforms = () => {
     onPlatformsChange(['codeforces', 'codechef', 'leetcode']);
+  };
+
+  const selectPlatform = (platform: Platform) => {
+    onPlatformsChange([platform]);
   };
 
   return (
     <section className="mb-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-        <h1 className="text-2xl font-bold text-neutral-800 mb-4 sm:mb-0">Programming Contests</h1>
+        <h1 className="text-2xl font-bold mb-4 sm:mb-0">Programming Contests</h1>
         
-        {/* Platform Filter */}
-        <div className="inline-flex items-center bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+        {/* Platform Filter - Simplified to act like radio buttons */}
+        <div className="inline-flex items-center bg-background border border-border rounded-lg shadow-sm overflow-hidden">
           <button 
             className={cn(
-              "px-4 py-2 text-sm font-medium border-r border-gray-200",
-              isAllSelected() ? "bg-primary-50 text-primary-700" : "text-gray-700 hover:bg-gray-50"
+              "px-4 py-2 text-sm font-medium border-r border-border",
+              isAllSelected() 
+                ? "bg-primary/10 text-primary font-medium" 
+                : "text-muted-foreground hover:bg-muted"
             )}
             onClick={selectAllPlatforms}>
             All
           </button>
           <button 
             className={cn(
-              "px-4 py-2 text-sm font-medium border-r border-gray-200",
-              isPlatformSelected('codeforces') 
-                ? "bg-platform-codeforces bg-opacity-10 text-platform-codeforces" 
-                : "text-gray-700 hover:bg-gray-50"
+              "px-4 py-2 text-sm font-medium border-r border-border",
+              isOnlyPlatformSelected('codeforces') 
+                ? "bg-primary/10 text-primary font-medium" 
+                : "text-muted-foreground hover:bg-muted"
             )}
-            onClick={() => togglePlatform('codeforces')}>
+            onClick={() => selectPlatform('codeforces')}>
             Codeforces
           </button>
           <button 
             className={cn(
-              "px-4 py-2 text-sm font-medium border-r border-gray-200",
-              isPlatformSelected('codechef') 
-                ? "bg-platform-codechef bg-opacity-10 text-platform-codechef" 
-                : "text-gray-700 hover:bg-gray-50"
+              "px-4 py-2 text-sm font-medium border-r border-border",
+              isOnlyPlatformSelected('codechef') 
+                ? "bg-primary/10 text-primary font-medium" 
+                : "text-muted-foreground hover:bg-muted"
             )}
-            onClick={() => togglePlatform('codechef')}>
+            onClick={() => selectPlatform('codechef')}>
             CodeChef
           </button>
           <button 
             className={cn(
               "px-4 py-2 text-sm font-medium",
-              isPlatformSelected('leetcode') 
-                ? "bg-platform-leetcode bg-opacity-10 text-platform-leetcode" 
-                : "text-gray-700 hover:bg-gray-50"
+              isOnlyPlatformSelected('leetcode') 
+                ? "bg-primary/10 text-primary font-medium" 
+                : "text-muted-foreground hover:bg-muted"
             )}
-            onClick={() => togglePlatform('leetcode')}>
+            onClick={() => selectPlatform('leetcode')}>
             LeetCode
           </button>
         </div>
       </div>
 
       {/* Contest Type Tabs */}
-      <div className="border-b border-gray-200 mb-6">
+      <div className="border-b border-border mb-6">
         <nav className="-mb-px flex space-x-8">
           <button 
             className={cn(
               "whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm",
               activeTab === 'upcoming' 
-                ? "border-primary-500 text-primary-600" 
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                ? "border-primary text-primary" 
+                : "border-transparent text-muted-foreground hover:border-border"
             )}
             onClick={() => onTabChange('upcoming')}>
             Upcoming Contests
@@ -107,8 +101,8 @@ export default function ContestFilter({
             className={cn(
               "whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm",
               activeTab === 'past' 
-                ? "border-primary-500 text-primary-600" 
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                ? "border-primary text-primary" 
+                : "border-transparent text-muted-foreground hover:border-border"
             )}
             onClick={() => onTabChange('past')}>
             Past Contests
