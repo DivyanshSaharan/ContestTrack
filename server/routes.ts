@@ -534,7 +534,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.user as any).id;
       const reminders = await storage.getContestReminders(userId);
-      res.json(reminders);
+      
+      // Get the actual contests for each reminder
+      const contests = [];
+      for (const reminder of reminders) {
+        const contest = await storage.getContestById(reminder.contestId);
+        if (contest) {
+          contests.push(contest);
+        }
+      }
+      
+      res.json(contests);
     } catch (error) {
       console.error("Error fetching contest reminders:", error);
       res.status(500).json({ message: "Server error fetching contest reminders" });
@@ -557,6 +567,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error checking contest reminder:", error);
       res.status(500).json({ message: "Server error checking contest reminder" });
+    }
+  });
+  
+  // Get count of contest reminders for the current user
+  app.get('/api/contest-reminders/count', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const reminders = await storage.getContestReminders(userId);
+      res.json({ count: reminders.length });
+    } catch (error) {
+      console.error('Error getting reminder count:', error);
+      res.status(500).json({ message: 'Failed to get reminder count' });
     }
   });
   

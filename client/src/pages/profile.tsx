@@ -2,6 +2,7 @@ import { useAuth } from "@/components/auth/useAuth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ContestPreferences from "@/components/preferences/ContestPreferences";
 import NotificationSettings from "@/components/notification/NotificationSettings";
+import PlatformConnections from "@/components/profile/PlatformConnections";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
@@ -62,9 +63,10 @@ export default function ProfilePage() {
       </div>
 
       <Tabs defaultValue="preferences" className="w-full">
-        <TabsList className="mb-6 grid grid-cols-2 w-full max-w-md">
+        <TabsList className="mb-6 grid grid-cols-3 w-full max-w-md">
           <TabsTrigger value="preferences">Contest Preferences</TabsTrigger>
-          <TabsTrigger value="notifications">Notification Settings</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="connections">Platforms</TabsTrigger>
         </TabsList>
         
         <TabsContent value="preferences">
@@ -73,6 +75,10 @@ export default function ProfilePage() {
         
         <TabsContent value="notifications">
           <NotificationSettings />
+        </TabsContent>
+        
+        <TabsContent value="connections">
+          <PlatformConnections userId={user.id} />
         </TabsContent>
       </Tabs>
     </div>
