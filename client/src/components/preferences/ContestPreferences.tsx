@@ -89,10 +89,23 @@ export default function ContestPreferences() {
   useEffect(() => {
     if (preferences) {
       const prefs = preferences as unknown as ContestPreference;
-      setFormState(prefs);
+      // Ensure all necessary properties exist before setting state
+      setFormState({
+        id: prefs.id || null,
+        userId: prefs.userId || 0,
+        codeforcesMinRating: prefs.codeforcesMinRating !== undefined ? prefs.codeforcesMinRating : 0,
+        codeforcesMaxRating: prefs.codeforcesMaxRating !== undefined ? prefs.codeforcesMaxRating : 4000,
+        codeforcesTypes: Array.isArray(prefs.codeforcesTypes) ? prefs.codeforcesTypes : [],
+        codechefTypes: Array.isArray(prefs.codechefTypes) ? prefs.codechefTypes : [],
+        leetcodeTypes: Array.isArray(prefs.leetcodeTypes) ? prefs.leetcodeTypes : [],
+        minDurationMinutes: prefs.minDurationMinutes !== undefined ? prefs.minDurationMinutes : 0,
+        maxDurationMinutes: prefs.maxDurationMinutes !== undefined ? prefs.maxDurationMinutes : 1440,
+        favoriteContestIds: Array.isArray(prefs.favoriteContestIds) ? prefs.favoriteContestIds : [],
+      });
+      
       setDurationRange([
-        prefs.minDurationMinutes || 0,
-        prefs.maxDurationMinutes || 1440,
+        prefs.minDurationMinutes !== undefined ? prefs.minDurationMinutes : 0,
+        prefs.maxDurationMinutes !== undefined ? prefs.maxDurationMinutes : 1440,
       ]);
     }
   }, [preferences]);

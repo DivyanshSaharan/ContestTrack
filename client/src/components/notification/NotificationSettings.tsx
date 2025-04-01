@@ -61,7 +61,15 @@ export default function NotificationSettings() {
   useEffect(() => {
     if (preferences) {
       const prefs = preferences as unknown as NotificationPreference;
-      setFormState(prefs);
+      // Ensure all necessary properties exist before setting state
+      setFormState({
+        id: prefs.id || null,
+        userId: prefs.userId || 0,
+        emailEnabled: prefs.emailEnabled !== undefined ? prefs.emailEnabled : true,
+        emailAddress: prefs.emailAddress || "",
+        notifyBefore: Array.isArray(prefs.notifyBefore) ? prefs.notifyBefore : ["1day"],
+        favoriteContestsOnly: prefs.favoriteContestsOnly !== undefined ? prefs.favoriteContestsOnly : false
+      });
     }
   }, [preferences]);
 

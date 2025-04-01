@@ -144,7 +144,7 @@ export function AuthModals({
     <>
       {/* Login Modal */}
       <Dialog open={isLoginOpen} onOpenChange={onCloseLogin}>
-        <DialogContent className="sm:max-w-md" aria-describedby="login-dialog-description">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex justify-between items-center mb-4">
               <DialogTitle className="text-xl font-bold text-gray-900">Log In</DialogTitle>
@@ -152,10 +152,10 @@ export function AuthModals({
                 <X className="h-6 w-6" />
               </Button>
             </div>
+            <DialogDescription>
+              Sign in to your account to track contests and receive notifications
+            </DialogDescription>
           </DialogHeader>
-          <DialogDescription id="login-dialog-description" className="sr-only">
-            Sign in to your account to track contests and receive notifications
-          </DialogDescription>
 
           <Form {...loginForm}>
             <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
@@ -259,7 +259,7 @@ export function AuthModals({
 
       {/* Registration Modal */}
       <Dialog open={isSignupOpen} onOpenChange={onCloseSignup}>
-        <DialogContent className="sm:max-w-md" aria-describedby="signup-dialog-description">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex justify-between items-center mb-4">
               <DialogTitle className="text-xl font-bold text-gray-900">Sign Up</DialogTitle>
@@ -267,7 +267,7 @@ export function AuthModals({
                 <X className="h-6 w-6" />
               </Button>
             </div>
-            <DialogDescription id="signup-dialog-description">
+            <DialogDescription>
               Create a new account to track programming contests
             </DialogDescription>
           </DialogHeader>
