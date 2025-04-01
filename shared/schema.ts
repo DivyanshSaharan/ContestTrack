@@ -1,4 +1,5 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, primaryKey } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -10,6 +11,14 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
 });
 
+export const usersRelations = relations(users, ({ one, many }) => ({
+  notificationPreferences: one(notificationPreferences, {
+    fields: [users.id],
+    references: [notificationPreferences.userId],
+  }),
+  contestReminders: many(contestReminders),
+}));
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -19,13 +28,20 @@ export const insertUserSchema = createInsertSchema(users).pick({
 // Notification preferences table schema
 export const notificationPreferences = pgTable("notification_preferences", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   emailNotifications: boolean("email_notifications").notNull().default(true),
   notificationTiming: text("notification_timing").notNull().default("1hour"),
   notifyCodeforces: boolean("notify_codeforces").notNull().default(true),
   notifyCodechef: boolean("notify_codechef").notNull().default(true),
   notifyLeetcode: boolean("notify_leetcode").notNull().default(true),
 });
+
+export const notificationPreferencesRelations = relations(notificationPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [notificationPreferences.userId],
+    references: [users.id],
+  }),
+}));
 
 export const insertNotificationPreferenceSchema = createInsertSchema(notificationPreferences).pick({
   userId: true,
@@ -47,6 +63,10 @@ export const contests = pgTable("contests", {
   duration: text("duration").notNull(), // Duration in human-readable format
 });
 
+export const contestsRelations = relations(contests, ({ many }) => ({
+  contestReminders: many(contestReminders),
+}));
+
 export const insertContestSchema = createInsertSchema(contests).pick({
   platform: true,
   name: true,
@@ -59,10 +79,21 @@ export const insertContestSchema = createInsertSchema(contests).pick({
 // Contest reminders table schema
 export const contestReminders = pgTable("contest_reminders", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  contestId: integer("contest_id").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  contestId: integer("contest_id").notNull().references(() => contests.id, { onDelete: "cascade" }),
   reminded: boolean("reminded").notNull().default(false),
 });
+
+export const contestRemindersRelations = relations(contestReminders, ({ one }) => ({
+  user: one(users, {
+    fields: [contestReminders.userId],
+    references: [users.id],
+  }),
+  contest: one(contests, {
+    fields: [contestReminders.contestId],
+    references: [contests.id],
+  }),
+}));
 
 export const insertContestReminderSchema = createInsertSchema(contestReminders).pick({
   userId: true,

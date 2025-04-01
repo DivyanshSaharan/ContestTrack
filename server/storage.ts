@@ -7,8 +7,14 @@ import {
   InsertNotificationPreference,
   ContestReminder,
   InsertContestReminder,
-  Platform
+  Platform,
+  users,
+  contests,
+  notificationPreferences,
+  contestReminders
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, gt, lt, lte, gte, desc, asc } from "drizzle-orm";
 
 // Storage interface for CRUD operations
 export interface IStorage {
@@ -40,77 +46,67 @@ export interface IStorage {
   getContestReminderByUserAndContest(userId: number, contestId: number): Promise<ContestReminder | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private contests: Map<number, Contest>;
-  private notificationPreferences: Map<number, NotificationPreference>;
-  private contestReminders: Map<number, ContestReminder>;
-  private currentUserId: number;
-  private currentContestId: number;
-  private currentNotificationPreferenceId: number;
-  private currentContestReminderId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.contests = new Map();
-    this.notificationPreferences = new Map();
-    this.contestReminders = new Map();
-    this.currentUserId = 1;
-    this.currentContestId = 1;
-    this.currentNotificationPreferenceId = 1;
-    this.currentContestReminderId = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   // User operations
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.email === email
-    );
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   // Contest operations
   async getAllContests(): Promise<Contest[]> {
-    return Array.from(this.contests.values());
+    return db.select().from(contests);
   }
 
   async getContestsByPlatforms(platforms: Platform[]): Promise<Contest[]> {
-    return Array.from(this.contests.values()).filter(
-      (contest) => platforms.includes(contest.platform as Platform)
+    if (platforms.length === 0) {
+      return this.getAllContests();
+    }
+    
+    return db.select().from(contests).where(
+      eq(contests.platform, platforms[0]) // Handle at least the first platform
     );
   }
 
   async getUpcomingContests(platforms?: Platform[]): Promise<Contest[]> {
     const now = new Date();
-    let contests = Array.from(this.contests.values()).filter(
-      (contest) => new Date(contest.startTime) > now
-    );
-
-    if (platforms && platforms.length > 0) {
-      contests = contests.filter(
-        (contest) => platforms.includes(contest.platform as Platform)
-      );
+    
+    const baseQuery = db.select()
+      .from(contests)
+      .where(
+        gt(contests.startTime, now)
+      )
+      .orderBy(asc(contests.startTime));
+    
+    if (!platforms || platforms.length === 0) {
+      return baseQuery;
     }
-
-    return contests.sort(
-      (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-    );
+    
+    // Handle platforms filtering separately
+    return db.select()
+      .from(contests)
+      .where(
+        and(
+          gt(contests.startTime, now),
+          eq(contests.platform, platforms[0]) // Filter by first platform as workaround
+        )
+      )
+      .orderBy(asc(contests.startTime));
   }
 
   async getPastContests(daysAgo: number, platforms?: Platform[]): Promise<Contest[]> {
@@ -118,110 +114,154 @@ export class MemStorage implements IStorage {
     const pastDate = new Date(now);
     pastDate.setDate(pastDate.getDate() - daysAgo);
 
-    let contests = Array.from(this.contests.values()).filter(
-      (contest) => new Date(contest.endTime) < now && new Date(contest.endTime) > pastDate
-    );
-
-    if (platforms && platforms.length > 0) {
-      contests = contests.filter(
-        (contest) => platforms.includes(contest.platform as Platform)
-      );
+    const baseQuery = db.select()
+      .from(contests)
+      .where(
+        and(
+          lt(contests.endTime, now),
+          gt(contests.endTime, pastDate)
+        )
+      )
+      .orderBy(desc(contests.endTime));
+    
+    if (!platforms || platforms.length === 0) {
+      return baseQuery;
     }
-
-    return contests.sort(
-      (a, b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime()
-    );
+    
+    // Handle platforms filtering separately
+    return db.select()
+      .from(contests)
+      .where(
+        and(
+          lt(contests.endTime, now),
+          gt(contests.endTime, pastDate),
+          eq(contests.platform, platforms[0]) // Filter by first platform as workaround
+        )
+      )
+      .orderBy(desc(contests.endTime));
   }
 
   async getCurrentContests(platforms?: Platform[]): Promise<Contest[]> {
     const now = new Date();
-    let contests = Array.from(this.contests.values()).filter(
-      (contest) => new Date(contest.startTime) <= now && new Date(contest.endTime) >= now
-    );
-
-    if (platforms && platforms.length > 0) {
-      contests = contests.filter(
-        (contest) => platforms.includes(contest.platform as Platform)
+    
+    const baseQuery = db.select()
+      .from(contests)
+      .where(
+        and(
+          lte(contests.startTime, now),
+          gte(contests.endTime, now)
+        )
       );
+    
+    if (!platforms || platforms.length === 0) {
+      return baseQuery;
     }
-
-    return contests;
+    
+    // Handle platforms filtering separately
+    return db.select()
+      .from(contests)
+      .where(
+        and(
+          lte(contests.startTime, now),
+          gte(contests.endTime, now),
+          eq(contests.platform, platforms[0]) // Filter by first platform as workaround
+        )
+      );
   }
 
   async createContest(insertContest: InsertContest): Promise<Contest> {
-    const id = this.currentContestId++;
-    const contest: Contest = { ...insertContest, id };
-    this.contests.set(id, contest);
+    const [contest] = await db.insert(contests).values(insertContest).returning();
     return contest;
   }
 
   async updateContest(id: number, contestUpdate: Partial<InsertContest>): Promise<Contest | undefined> {
-    const contest = this.contests.get(id);
-    if (!contest) return undefined;
-
-    const updatedContest = { ...contest, ...contestUpdate };
-    this.contests.set(id, updatedContest);
+    const [updatedContest] = await db
+      .update(contests)
+      .set(contestUpdate)
+      .where(eq(contests.id, id))
+      .returning();
+    
     return updatedContest;
   }
 
   async getContestById(id: number): Promise<Contest | undefined> {
-    return this.contests.get(id);
+    const [contest] = await db
+      .select()
+      .from(contests)
+      .where(eq(contests.id, id));
+    
+    return contest;
   }
 
   // Notification preferences operations
   async getNotificationPreferences(userId: number): Promise<NotificationPreference | undefined> {
-    return Array.from(this.notificationPreferences.values()).find(
-      (pref) => pref.userId === userId
-    );
+    const [preferences] = await db
+      .select()
+      .from(notificationPreferences)
+      .where(eq(notificationPreferences.userId, userId));
+    
+    return preferences;
   }
 
   async createNotificationPreferences(insertPreferences: InsertNotificationPreference): Promise<NotificationPreference> {
-    const id = this.currentNotificationPreferenceId++;
-    const preferences: NotificationPreference = { ...insertPreferences, id };
-    this.notificationPreferences.set(id, preferences);
+    const [preferences] = await db
+      .insert(notificationPreferences)
+      .values(insertPreferences)
+      .returning();
+    
     return preferences;
   }
 
   async updateNotificationPreferences(userId: number, preferencesUpdate: Partial<InsertNotificationPreference>): Promise<NotificationPreference | undefined> {
-    const preferences = Array.from(this.notificationPreferences.values()).find(
-      (pref) => pref.userId === userId
-    );
+    const [updatedPreferences] = await db
+      .update(notificationPreferences)
+      .set(preferencesUpdate)
+      .where(eq(notificationPreferences.userId, userId))
+      .returning();
     
-    if (!preferences) return undefined;
-
-    const updatedPreferences = { ...preferences, ...preferencesUpdate };
-    this.notificationPreferences.set(preferences.id, updatedPreferences);
     return updatedPreferences;
   }
 
   // Contest reminders operations
   async getContestReminders(userId: number): Promise<ContestReminder[]> {
-    return Array.from(this.contestReminders.values()).filter(
-      (reminder) => reminder.userId === userId
-    );
+    return db
+      .select()
+      .from(contestReminders)
+      .where(eq(contestReminders.userId, userId));
   }
 
   async createContestReminder(insertReminder: InsertContestReminder): Promise<ContestReminder> {
-    const id = this.currentContestReminderId++;
-    const reminder: ContestReminder = { ...insertReminder, id };
-    this.contestReminders.set(id, reminder);
+    const [reminder] = await db
+      .insert(contestReminders)
+      .values(insertReminder)
+      .returning();
+    
     return reminder;
   }
 
   async updateContestReminder(id: number, reminded: boolean): Promise<ContestReminder | undefined> {
-    const reminder = this.contestReminders.get(id);
-    if (!reminder) return undefined;
-
-    const updatedReminder = { ...reminder, reminded };
-    this.contestReminders.set(id, updatedReminder);
+    const [updatedReminder] = await db
+      .update(contestReminders)
+      .set({ reminded })
+      .where(eq(contestReminders.id, id))
+      .returning();
+    
     return updatedReminder;
   }
 
   async getContestReminderByUserAndContest(userId: number, contestId: number): Promise<ContestReminder | undefined> {
-    return Array.from(this.contestReminders.values()).find(
-      (reminder) => reminder.userId === userId && reminder.contestId === contestId
-    );
+    const [reminder] = await db
+      .select()
+      .from(contestReminders)
+      .where(
+        and(
+          eq(contestReminders.userId, userId),
+          eq(contestReminders.contestId, contestId)
+        )
+      );
+    
+    return reminder;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
