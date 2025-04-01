@@ -24,6 +24,8 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          50: "#f0f9ff",
+          700: "#0369a1",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -60,6 +62,11 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
+        },
+        platform: {
+          "codeforces": "#1E88E5", // Blue color for Codeforces
+          "codechef": "#F57C00",   // Orange color for CodeChef
+          "leetcode": "#13a966",   // Green color for LeetCode
         },
       },
       keyframes: {

@@ -86,7 +86,7 @@ export async function fetchCodeforcesContests(): Promise<InsertContest[]> {
 // Fetch Codechef contests
 export async function fetchCodechefContests(): Promise<InsertContest[]> {
   try {
-    // First attempt to use kontests.net API
+    // Try to use kontests.net API
     try {
       const response = await axios.get('https://kontests.net/api/v1/code_chef');
       const contests = response.data;
@@ -107,50 +107,8 @@ export async function fetchCodechefContests(): Promise<InsertContest[]> {
       });
     } catch (apiError) {
       console.error('Error using kontests.net API for CodeChef:', apiError);
-      
-      // Fallback to sample CodeChef contests with realistic data
-      const now = new Date();
-      const tomorrow = new Date(now);
-      tomorrow.setDate(now.getDate() + 1);
-      
-      const nextWeek = new Date(now);
-      nextWeek.setDate(now.getDate() + 7);
-      
-      const yesterdayEnd = new Date(now);
-      yesterdayEnd.setDate(now.getDate() - 1);
-      
-      const threeHoursAgo = new Date(now);
-      threeHoursAgo.setHours(now.getHours() - 3);
-      
-      const fourHoursLater = new Date(now);
-      fourHoursLater.setHours(now.getHours() + 4);
-      
-      return [
-        {
-          platform: 'codechef' as Platform,
-          name: 'CodeChef April Long Challenge',
-          url: 'https://www.codechef.com/contests',
-          startTime: tomorrow,
-          endTime: nextWeek,
-          duration: '7 days'
-        },
-        {
-          platform: 'codechef' as Platform,
-          name: 'CodeChef Starters 112',
-          url: 'https://www.codechef.com/contests',
-          startTime: threeHoursAgo,
-          endTime: fourHoursLater,
-          duration: '3h'
-        },
-        {
-          platform: 'codechef' as Platform,
-          name: 'CodeChef March Cook-Off',
-          url: 'https://www.codechef.com/contests',
-          startTime: new Date(yesterdayEnd.getTime() - 3 * 3600 * 1000),
-          endTime: yesterdayEnd,
-          duration: '2h 30m'
-        }
-      ];
+      // Don't use dummy data, just return an empty array if the API fails
+      return [];
     }
   } catch (error) {
     console.error('Error fetching Codechef contests:', error);
@@ -161,7 +119,7 @@ export async function fetchCodechefContests(): Promise<InsertContest[]> {
 // Fetch Leetcode contests
 export async function fetchLeetcodeContests(): Promise<InsertContest[]> {
   try {
-    // First attempt to use kontests.net API
+    // Try to use kontests.net API
     try {
       const response = await axios.get('https://kontests.net/api/v1/leet_code');
       const contests = response.data;
@@ -182,54 +140,8 @@ export async function fetchLeetcodeContests(): Promise<InsertContest[]> {
       });
     } catch (apiError) {
       console.error('Error using kontests.net API for LeetCode:', apiError);
-      
-      // Fallback to sample LeetCode contests with realistic data
-      const now = new Date();
-      
-      // Next weekend for weekly contest
-      const nextSaturday = new Date(now);
-      nextSaturday.setDate(now.getDate() + (6 - now.getDay() + 7) % 7);
-      nextSaturday.setHours(10, 30, 0, 0);
-      
-      // Next weekend for biweekly contest
-      const nextSunday = new Date(nextSaturday);
-      nextSunday.setDate(nextSaturday.getDate() + 1);
-      nextSunday.setHours(10, 30, 0, 0);
-      
-      // Last weekend for the past contest
-      const lastSaturday = new Date(now);
-      lastSaturday.setDate(now.getDate() - (now.getDay() + 1));
-      lastSaturday.setHours(10, 30, 0, 0);
-      
-      // Contest duration - typically 90 minutes
-      const contestDuration = 90 * 60 * 1000;
-      
-      return [
-        {
-          platform: 'leetcode' as Platform,
-          name: 'Weekly Contest 389',
-          url: 'https://leetcode.com/contest/weekly-contest-389',
-          startTime: nextSaturday,
-          endTime: new Date(nextSaturday.getTime() + contestDuration),
-          duration: '1h 30m'
-        },
-        {
-          platform: 'leetcode' as Platform,
-          name: 'Biweekly Contest 126',
-          url: 'https://leetcode.com/contest/biweekly-contest-126',
-          startTime: nextSunday,
-          endTime: new Date(nextSunday.getTime() + contestDuration),
-          duration: '1h 30m'
-        },
-        {
-          platform: 'leetcode' as Platform,
-          name: 'Weekly Contest 388',
-          url: 'https://leetcode.com/contest/weekly-contest-388',
-          startTime: lastSaturday,
-          endTime: new Date(lastSaturday.getTime() + contestDuration),
-          duration: '1h 30m'
-        }
-      ];
+      // Don't use dummy data, just return an empty array if the API fails
+      return [];
     }
   } catch (error) {
     console.error('Error fetching Leetcode contests:', error);
