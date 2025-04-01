@@ -63,7 +63,10 @@ export default function ContestPreferences() {
   // Fetch user's contest preferences
   const { data: preferences, isLoading } = useQuery({
     queryKey: ["/api/contest-preferences"],
-    queryFn: () => apiRequest("/api/contest-preferences"),
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/contest-preferences");
+      return response.json();
+    },
   });
 
   // Set up local state for form
@@ -97,13 +100,8 @@ export default function ContestPreferences() {
   // Define mutation for saving preferences
   const savePreferences = useMutation({
     mutationFn: async (data: Partial<ContestPreference>) => {
-      return apiRequest("/api/contest-preferences", {
-        method: "PUT",
-        body: JSON.stringify(data),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await apiRequest("PUT", "/api/contest-preferences", data);
+      return response.json();
     },
     onSuccess: () => {
       toast({

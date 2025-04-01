@@ -77,26 +77,66 @@ export function AuthModals({
     },
   });
 
+  // State for error messages
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [registerError, setRegisterError] = useState<string | null>(null);
+
   // Handle login form submission
   const onLoginSubmit = async (data: LoginFormValues) => {
+    setLoginError(null);
     try {
       await login(data);
       onCloseLogin();
       loginForm.reset();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
+      
+      // Extract the error message from the response
+      let errorMessage = "Login failed. Please check your credentials and try again.";
+      
+      if (error?.message) {
+        if (error.message.includes("Incorrect username")) {
+          errorMessage = "Username not found. Please check your username or create an account.";
+        } else if (error.message.includes("Incorrect password")) {
+          errorMessage = "Incorrect password. Please try again.";
+        } else if (error.message.includes("Unauthorized")) {
+          errorMessage = "Authentication failed. Please check your credentials.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setLoginError(errorMessage);
     }
   };
 
   // Handle register form submission
   const onRegisterSubmit = async (data: RegisterFormValues) => {
+    setRegisterError(null);
     try {
       const { username, email, password } = data;
       await register({ username, email, password });
       onCloseSignup();
       registerForm.reset();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error);
+      
+      // Extract the error message from the response
+      let errorMessage = "Registration failed. The username or email might already be in use.";
+      
+      if (error?.message) {
+        if (error.message.includes("Username already exists")) {
+          errorMessage = "This username is already taken. Please choose another one.";
+        } else if (error.message.includes("Email already exists")) {
+          errorMessage = "This email is already registered. Please use another email or try to log in.";
+        } else if (error.message.includes("Validation error")) {
+          errorMessage = "Please check your input. Make sure your email is valid and password meets requirements.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setRegisterError(errorMessage);
     }
   };
 
@@ -167,8 +207,14 @@ export function AuthModals({
                 </Button>
               </div>
 
+              {loginError && (
+                <div className="p-3 bg-red-50 text-red-500 text-sm rounded-md">
+                  {loginError}
+                </div>
+              )}
+              
               <Button type="submit" className="w-full" disabled={loginForm.formState.isSubmitting}>
-                Sign in
+                {loginForm.formState.isSubmitting ? "Signing in..." : "Sign in"}
               </Button>
             </form>
           </Form>
@@ -284,8 +330,14 @@ export function AuthModals({
                 )}
               />
 
+              {registerError && (
+                <div className="p-3 bg-red-50 text-red-500 text-sm rounded-md">
+                  {registerError}
+                </div>
+              )}
+              
               <Button type="submit" className="w-full" disabled={registerForm.formState.isSubmitting}>
-                Create Account
+                {registerForm.formState.isSubmitting ? "Creating account..." : "Create Account"}
               </Button>
             </form>
           </Form>

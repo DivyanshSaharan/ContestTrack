@@ -41,7 +41,10 @@ export default function NotificationSettings() {
   // Fetch notification preferences
   const { data: preferences, isLoading } = useQuery({
     queryKey: ["/api/notification-preferences"],
-    queryFn: () => apiRequest("/api/notification-preferences"),
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/notification-preferences");
+      return response.json();
+    },
   });
 
   // Local state for form
@@ -65,13 +68,8 @@ export default function NotificationSettings() {
   // Define mutation for saving preferences
   const savePreferences = useMutation({
     mutationFn: async (data: Partial<NotificationPreference>) => {
-      return apiRequest("/api/notification-preferences", {
-        method: "PUT",
-        body: JSON.stringify(data),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await apiRequest("PUT", "/api/notification-preferences", data);
+      return response.json();
     },
     onSuccess: () => {
       toast({

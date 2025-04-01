@@ -2,29 +2,64 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    // First check if the error response is in JSON format
+    const contentType = res.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      try {
+        // Clone the response to avoid "body already read" errors
+        const clonedRes = res.clone();
+        const errorData = await clonedRes.json();
+        
+        // If there's a message field, use it for the error
+        if (errorData && errorData.message) {
+          throw new Error(errorData.message);
+        }
+        
+        // Otherwise, stringify the whole error object
+        throw new Error(JSON.stringify(errorData));
+      } catch (jsonError) {
+        // If JSON parsing fails, fallback to text
+        const text = await res.text() || res.statusText;
+        throw new Error(`${res.status}: ${text}`);
+      }
+    } else {
+      // If not JSON, use text as before
+      const text = await res.text() || res.statusText;
+      throw new Error(`${res.status}: ${text}`);
+    }
   }
 }
 
 export async function apiRequest<T = any>(
+  method: string,
   url: string,
-  options?: RequestInit
-): Promise<T> {
-  const res = await fetch(url, {
-    credentials: "include",
-    ...options,
-  });
+  body?: any,
+  customHeaders?: HeadersInit
+): Promise<Response> {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...customHeaders
+  };
 
-  await throwIfResNotOk(res);
-  
-  // If the content type is JSON, parse it
-  if (res.headers.get("content-type")?.includes("application/json")) {
-    return res.json();
+  const options: RequestInit = {
+    method,
+    headers,
+    credentials: 'include',
+  };
+
+  // Only add body for non-GET requests and if body is provided
+  if (method !== 'GET' && body !== undefined) {
+    options.body = JSON.stringify(body);
   }
+
+  // Return the response without parsing it
+  // The caller can then use .json() or other methods as needed
+  const response = await fetch(url, options);
   
-  // Otherwise, return the response
-  return res as unknown as T;
+  // Check if response is ok, will throw if not
+  await throwIfResNotOk(response);
+  
+  return response;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -42,7 +77,16 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    
+    // Check if the response has content
+    const contentType = res.headers.get("content-type");
+    if (contentType?.includes("application/json")) {
+      return await res.json();
+    }
+    
+    // If no content or not JSON, return null
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
   };
 
 export const queryClient = new QueryClient({
