@@ -226,13 +226,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateNotificationPreferences(userId: number, preferencesUpdate: Partial<InsertNotificationPreference>): Promise<NotificationPreference | undefined> {
-    const [updatedPreferences] = await db
-      .update(notificationPreferences)
-      .set(preferencesUpdate)
-      .where(eq(notificationPreferences.userId, userId))
-      .returning();
-    
-    return updatedPreferences;
+    try {
+      // First get the existing preferences to ensure they exist
+      const [existingPrefs] = await db
+        .select()
+        .from(notificationPreferences)
+        .where(eq(notificationPreferences.userId, userId));
+      
+      if (!existingPrefs) return undefined;
+      
+      // Then update the preferences
+      const [updatedPreferences] = await db
+        .update(notificationPreferences)
+        .set(preferencesUpdate)
+        .where(eq(notificationPreferences.userId, userId))
+        .returning();
+      
+      return updatedPreferences;
+    } catch (error) {
+      console.error("Error in updateNotificationPreferences:", error);
+      throw error;
+    }
   }
 
   // Contest preferences operations

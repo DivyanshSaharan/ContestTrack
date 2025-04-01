@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Contest } from "@shared/schema";
 import { formatDate } from "@/lib/utils/formatters";
 import { useAuth } from "../auth/useAuth";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Bell, ExternalLink } from "lucide-react";
+import { Bell, BellOff, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
 
 interface ContestTableProps {
   contests: Contest[];
@@ -13,9 +14,43 @@ interface ContestTableProps {
 }
 
 export default function ContestTable({ contests, type }: ContestTableProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
   const [remindingContestId, setRemindingContestId] = useState<number | null>(null);
+  const [reminderStatuses, setReminderStatuses] = useState<Record<number, boolean>>({});
+
+  // Fetch reminder statuses for contests
+  useEffect(() => {
+    if (isAuthenticated && user && type === "upcoming") {
+      const fetchReminderStatuses = async () => {
+        try {
+          const results = await Promise.all(
+            contests.map(async (contest) => {
+              try {
+                const response = await apiRequest('GET', `/api/contest-reminders/check/${contest.id}`);
+                const data = await response.json();
+                return { contestId: contest.id, hasReminder: data.hasReminder };
+              } catch (error) {
+                console.error(`Error fetching reminder status for contest ${contest.id}:`, error);
+                return { contestId: contest.id, hasReminder: false };
+              }
+            })
+          );
+          
+          const statusMap: Record<number, boolean> = {};
+          results.forEach(({contestId, hasReminder}) => {
+            statusMap[contestId] = hasReminder;
+          });
+          
+          setReminderStatuses(statusMap);
+        } catch (error) {
+          console.error("Error fetching reminder statuses:", error);
+        }
+      };
+      
+      fetchReminderStatuses();
+    }
+  }, [isAuthenticated, user, contests, type]);
 
   // Get platform icon URL
   const getPlatformIcon = (platform: string) => {
@@ -49,8 +84,8 @@ export default function ContestTable({ contests, type }: ContestTableProps) {
     }
   };
 
-  // Set reminder for contest
-  const setReminder = async (contestId: number) => {
+  // Toggle reminder for contest
+  const toggleReminder = async (contestId: number) => {
     if (!isAuthenticated) {
       toast({
         title: "Authentication required",
@@ -60,21 +95,46 @@ export default function ContestTable({ contests, type }: ContestTableProps) {
       return;
     }
     
+    const hasReminder = reminderStatuses[contestId];
+    
     try {
       setRemindingContestId(contestId);
-      await apiRequest('POST', '/api/contest-reminders', { contestId });
-      toast({
-        title: "Reminder set",
-        description: "You'll be notified before the contest starts",
-        variant: "default",
-      });
+      
+      if (hasReminder) {
+        // Remove reminder
+        await apiRequest('DELETE', `/api/contest-reminders/${contestId}`);
+        setReminderStatuses(prev => ({
+          ...prev,
+          [contestId]: false
+        }));
+        toast({
+          title: "Reminder removed",
+          description: "You won't be notified for this contest",
+          variant: "default",
+        });
+      } else {
+        // Add reminder
+        await apiRequest('POST', '/api/contest-reminders', { contestId });
+        setReminderStatuses(prev => ({
+          ...prev,
+          [contestId]: true
+        }));
+        toast({
+          title: "Reminder set",
+          description: "You'll be notified before the contest starts",
+          variant: "default",
+        });
+      }
+      
+      // Refresh the reminders list
+      queryClient.invalidateQueries({ queryKey: ['/api/contest-reminders'] });
     } catch (error) {
       toast({
-        title: "Failed to set reminder",
-        description: "An error occurred while setting the reminder",
+        title: hasReminder ? "Failed to remove reminder" : "Failed to set reminder",
+        description: "An error occurred. Please try again.",
         variant: "destructive",
       });
-      console.error("Error setting reminder:", error);
+      console.error("Error toggling reminder:", error);
     } finally {
       setRemindingContestId(null);
     }
@@ -122,11 +182,16 @@ export default function ContestTable({ contests, type }: ContestTableProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-primary-500 hover:text-primary-700 mr-4"
-                      onClick={() => setReminder(contest.id)}
+                      className={`${reminderStatuses[contest.id] ? 'text-primary-700' : 'text-gray-500'} hover:text-primary-700 mr-4`}
+                      onClick={() => toggleReminder(contest.id)}
                       disabled={remindingContestId === contest.id}
+                      title={reminderStatuses[contest.id] ? "Remove reminder" : "Set reminder"}
                     >
-                      <Bell className="h-5 w-5" />
+                      {reminderStatuses[contest.id] ? (
+                        <Bell className="h-5 w-5 fill-primary-500" />
+                      ) : (
+                        <BellOff className="h-5 w-5" />
+                      )}
                     </Button>
                   )}
                   <a

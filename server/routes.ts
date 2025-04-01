@@ -1,8 +1,10 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
 import { fetchAllContests } from "./contest-api";
 import { processContestNotifications, initializeEmailService } from "./email";
+import { and, eq } from "drizzle-orm";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
@@ -17,6 +19,7 @@ import {
   insertNotificationPreferenceSchema,
   insertContestPreferenceSchema,
   insertContestReminderSchema,
+  contestReminders,
 } from "@shared/schema";
 
 // Initialize email service
@@ -535,6 +538,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching contest reminders:", error);
       res.status(500).json({ message: "Server error fetching contest reminders" });
+    }
+  });
+  
+  // Check if a reminder exists for a contest
+  app.get('/api/contest-reminders/check/:contestId', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const contestId = parseInt(req.params.contestId);
+      
+      // Check if reminder exists
+      const reminder = await storage.getContestReminderByUserAndContest(userId, contestId);
+      
+      res.json({ 
+        hasReminder: !!reminder,
+        reminder: reminder || null
+      });
+    } catch (error) {
+      console.error("Error checking contest reminder:", error);
+      res.status(500).json({ message: "Server error checking contest reminder" });
+    }
+  });
+  
+  // Delete a reminder
+  app.delete('/api/contest-reminders/:contestId', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const contestId = parseInt(req.params.contestId);
+      
+      // Use db directly for DELETE since we don't have a delete method in storage
+      await db.delete(contestReminders)
+        .where(
+          and(
+            eq(contestReminders.userId, userId),
+            eq(contestReminders.contestId, contestId)
+          )
+        );
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting contest reminder:", error);
+      res.status(500).json({ message: "Server error deleting contest reminder" });
     }
   });
 

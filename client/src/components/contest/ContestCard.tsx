@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Contest } from "@shared/schema";
 import { useAuth } from "../auth/useAuth";
 import { useCountdown } from "@/lib/hooks/useCountdown";
 import { formatDate } from "@/lib/utils/formatters";
 import { Button } from "@/components/ui/button";
-import { Bell, ExternalLink } from "lucide-react";
+import { Bell, BellOff, ExternalLink } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import { useQuery } from "@tanstack/react-query";
 
 type ContestStatus = "live" | "soon" | "upcoming" | "past";
 
@@ -17,15 +18,41 @@ interface ContestCardProps {
 }
 
 export default function ContestCard({ contest, status }: ContestCardProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
   const [isReminding, setIsReminding] = useState(false);
+  const [hasReminder, setHasReminder] = useState(false);
 
   // Calculate countdown or time elapsed
   const { timeDisplay, percentComplete } = useCountdown(
     new Date(contest.startTime), 
     new Date(contest.endTime)
   );
+  
+  // Fetch contest reminder status for this user and contest
+  const { data: reminderData } = useQuery({
+    queryKey: ['/api/contest-reminders', contest.id],
+    queryFn: async () => {
+      if (!isAuthenticated || !user) return null;
+      try {
+        const response = await apiRequest('GET', `/api/contest-reminders/check/${contest.id}`);
+        return response.json();
+      } catch (error) {
+        console.error("Failed to fetch reminder status:", error);
+        return null;
+      }
+    },
+    enabled: isAuthenticated && !!user
+  });
+  
+  // Update the reminder state when data changes
+  useEffect(() => {
+    if (reminderData && reminderData.hasReminder) {
+      setHasReminder(true);
+    } else {
+      setHasReminder(false);
+    }
+  }, [reminderData]);
   
   // Get platform icon URL
   const getPlatformIcon = (platform: string) => {
@@ -55,8 +82,8 @@ export default function ContestCard({ contest, status }: ContestCardProps) {
     }
   };
   
-  // Set reminder for contest
-  const setReminder = async () => {
+  // Toggle reminder for contest
+  const toggleReminder = async () => {
     if (!isAuthenticated) {
       toast({
         title: "Authentication required",
@@ -68,19 +95,33 @@ export default function ContestCard({ contest, status }: ContestCardProps) {
     
     try {
       setIsReminding(true);
-      await apiRequest('POST', '/api/contest-reminders', { contestId: contest.id });
-      toast({
-        title: "Reminder set",
-        description: `You'll be notified before ${contest.name} starts`,
-        variant: "default",
-      });
+      
+      if (hasReminder) {
+        // Remove reminder
+        await apiRequest('DELETE', `/api/contest-reminders/${contest.id}`);
+        setHasReminder(false);
+        toast({
+          title: "Reminder removed",
+          description: `You won't be notified for ${contest.name}`,
+          variant: "default",
+        });
+      } else {
+        // Add reminder
+        await apiRequest('POST', '/api/contest-reminders', { contestId: contest.id });
+        setHasReminder(true);
+        toast({
+          title: "Reminder set",
+          description: `You'll be notified before ${contest.name} starts`,
+          variant: "default",
+        });
+      }
     } catch (error) {
       toast({
-        title: "Failed to set reminder",
-        description: "An error occurred while setting the reminder",
+        title: hasReminder ? "Failed to remove reminder" : "Failed to set reminder",
+        description: "An error occurred. Please try again.",
         variant: "destructive",
       });
-      console.error("Error setting reminder:", error);
+      console.error("Error toggling reminder:", error);
     } finally {
       setIsReminding(false);
     }
@@ -143,12 +184,17 @@ export default function ContestCard({ contest, status }: ContestCardProps) {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center p-0"
-              onClick={setReminder}
+              className={`${hasReminder ? 'text-primary-700' : 'text-gray-500'} hover:text-primary-800 text-sm font-medium flex items-center p-0`}
+              onClick={toggleReminder}
               disabled={isReminding}
+              title={hasReminder ? "Remove reminder" : "Set reminder"}
             >
-              <Bell className="h-4 w-4 mr-1" />
-              Remind Me
+              {hasReminder ? (
+                <Bell className="h-5 w-5 mr-1 fill-primary-500" />
+              ) : (
+                <BellOff className="h-5 w-5 mr-1" />
+              )}
+              {hasReminder ? "Notifying" : "Notify me"}
             </Button>
           ) : (
             <Button
