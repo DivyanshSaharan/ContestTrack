@@ -11,9 +11,20 @@ export default function ContestList() {
   const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(["codeforces", "codechef", "leetcode"]);
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
 
-  // Query for getting all contests
+  // Query for getting all contests with platform filtering
+  const queryParams = selectedPlatforms.length > 0 
+    ? `?platforms=${selectedPlatforms.join(',')}`
+    : '';
+    
   const { data: allContests, isLoading: isLoadingAll } = useQuery({
-    queryKey: ['/api/contests'],
+    queryKey: ['/api/contests', selectedPlatforms],
+    queryFn: async () => {
+      const response = await fetch(`/api/contests${queryParams}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch contests');
+      }
+      return response.json();
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -30,10 +41,8 @@ export default function ContestList() {
     const now = new Date();
     const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-    // Filter contests by selected platforms
-    const filteredContests = allContests.filter((contest: Contest) => 
-      selectedPlatforms.includes(contest.platform as Platform)
-    );
+    // No need to filter by platform again, as it's done in the API request
+    const filteredContests = allContests;
 
     // Current contests (happening now)
     const current = filteredContests.filter((contest: Contest) => 

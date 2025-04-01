@@ -425,15 +425,30 @@ async function fetchAndStoreContests() {
     console.log("Fetching contests from platforms...");
     const contests = await fetchAllContests();
     
-    // Store all fetched contests
-    for (const contest of contests) {
-      // Store each contest
-      // In a real implementation, we would check if the contest already exists
-      // and update it if necessary, but for simplicity we'll just add them all
-      await storage.createContest(contest);
+    // Get all existing contests to check for duplicates
+    const existingContests = await storage.getAllContests();
+    const existingContestKeys = new Map();
+    
+    // Create a map of existing contests using a unique key (platform + name + startTime)
+    for (const contest of existingContests) {
+      const key = `${contest.platform}-${contest.name}-${new Date(contest.startTime).toISOString()}`;
+      existingContestKeys.set(key, contest);
     }
     
-    console.log(`Successfully fetched and stored ${contests.length} contests`);
+    let newContestsCount = 0;
+    
+    // Store all fetched contests, checking for duplicates
+    for (const contest of contests) {
+      const key = `${contest.platform}-${contest.name}-${new Date(contest.startTime).toISOString()}`;
+      
+      if (!existingContestKeys.has(key)) {
+        // Only create if it doesn't already exist
+        await storage.createContest(contest);
+        newContestsCount++;
+      }
+    }
+    
+    console.log(`Successfully fetched and stored ${newContestsCount} new contests (${contests.length} total)`);
   } catch (error) {
     console.error("Error fetching and storing contests:", error);
   }
