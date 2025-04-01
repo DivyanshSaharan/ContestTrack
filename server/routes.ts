@@ -11,9 +11,11 @@ import cron from "node-cron";
 import { z } from "zod";
 import {
   PlatformEnum,
+  Platform,
   loginSchema,
   insertUserSchema,
   insertNotificationPreferenceSchema,
+  insertContestPreferenceSchema,
   insertContestReminderSchema,
 } from "@shared/schema";
 
@@ -365,6 +367,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error updating notification preferences:", error);
       res.status(500).json({ message: "Server error updating notification preferences" });
+    }
+  });
+
+  // Contest preferences routes
+  app.get("/api/contest-preferences", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const preferences = await storage.getContestPreferences(userId);
+      
+      if (!preferences) {
+        // Return empty preferences if none exist
+        return res.json({
+          id: null,
+          userId: userId,
+          codeforcesMinRating: 0,
+          codeforcesMaxRating: 4000,
+          codeforcesTypes: [],
+          codechefTypes: [],
+          leetcodeTypes: [],
+          minDurationMinutes: 0,
+          maxDurationMinutes: 1440,
+          favoriteContestIds: []
+        });
+      }
+      
+      res.json(preferences);
+    } catch (error) {
+      console.error("Error fetching contest preferences:", error);
+      res.status(500).json({ message: "Server error fetching contest preferences" });
+    }
+  });
+
+  app.put("/api/contest-preferences", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const preferencesData = req.body;
+      
+      // Validate preferences data
+      insertContestPreferenceSchema
+        .omit({ userId: true })
+        .partial()
+        .parse(preferencesData);
+      
+      let preferences = await storage.getContestPreferences(userId);
+      
+      if (!preferences) {
+        // Create new preferences if none exist
+        preferences = await storage.createContestPreferences({
+          userId,
+          ...preferencesData,
+        });
+      } else {
+        // Update existing preferences
+        preferences = await storage.updateContestPreferences(userId, preferencesData);
+      }
+      
+      res.json(preferences);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating contest preferences:", error);
+      res.status(500).json({ message: "Server error updating contest preferences" });
+    }
+  });
+
+  // Favorite contests routes
+  app.post("/api/favorite-contest/:contestId", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const contestId = parseInt(req.params.contestId);
+      
+      if (isNaN(contestId)) {
+        return res.status(400).json({ message: "Invalid contest ID" });
+      }
+      
+      // Check if contest exists
+      const contest = await storage.getContestById(contestId);
+      if (!contest) {
+        return res.status(404).json({ message: "Contest not found" });
+      }
+      
+      // Toggle favorite status
+      const updatedPrefs = await storage.toggleFavoriteContest(userId, contestId);
+      res.json(updatedPrefs);
+    } catch (error) {
+      console.error("Error toggling favorite contest:", error);
+      res.status(500).json({ message: "Server error toggling favorite contest" });
+    }
+  });
+  
+  app.get("/api/favorite-contests", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const favorites = await storage.getFavoriteContests(userId);
+      res.json(favorites);
+    } catch (error) {
+      console.error("Error fetching favorite contests:", error);
+      res.status(500).json({ message: "Server error fetching favorite contests" });
+    }
+  });
+  
+  app.get("/api/personalized-contests", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const platformParam = req.query.platform as string | undefined;
+      let platforms: Platform[] | undefined;
+      
+      if (platformParam) {
+        try {
+          const platform = PlatformEnum.parse(platformParam);
+          platforms = [platform];
+        } catch (error) {
+          return res.status(400).json({ message: `Invalid platform: ${platformParam}` });
+        }
+      }
+      
+      const contests = await storage.getContestsByPreferences(userId, platforms);
+      res.json(contests);
+    } catch (error) {
+      console.error("Error fetching personalized contests:", error);
+      res.status(500).json({ message: "Server error fetching personalized contests" });
     }
   });
 
