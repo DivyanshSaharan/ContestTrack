@@ -22,10 +22,11 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 interface NotificationPreference {
   id: number | null;
   userId: number;
-  emailEnabled: boolean;
-  emailAddress: string;
-  notifyBefore: string[];
-  favoriteContestsOnly: boolean;
+  emailNotifications: boolean;
+  notificationTiming: string;
+  notifyCodeforces: boolean;
+  notifyCodechef: boolean;
+  notifyLeetcode: boolean;
 }
 
 // Define notification timing options
@@ -51,10 +52,11 @@ export default function NotificationSettings() {
   const [formState, setFormState] = useState<NotificationPreference>({
     id: null,
     userId: 0,
-    emailEnabled: true,
-    emailAddress: "",
-    notifyBefore: ["1day"],
-    favoriteContestsOnly: false
+    emailNotifications: true,
+    notificationTiming: "1hour",
+    notifyCodeforces: true,
+    notifyCodechef: true,
+    notifyLeetcode: true
   });
 
   // Update form state when preferences are loaded
@@ -65,10 +67,11 @@ export default function NotificationSettings() {
       setFormState({
         id: prefs.id || null,
         userId: prefs.userId || 0,
-        emailEnabled: prefs.emailEnabled !== undefined ? prefs.emailEnabled : true,
-        emailAddress: prefs.emailAddress || "",
-        notifyBefore: Array.isArray(prefs.notifyBefore) ? prefs.notifyBefore : ["1day"],
-        favoriteContestsOnly: prefs.favoriteContestsOnly !== undefined ? prefs.favoriteContestsOnly : false
+        emailNotifications: prefs.emailNotifications !== undefined ? prefs.emailNotifications : true,
+        notificationTiming: prefs.notificationTiming || "1hour",
+        notifyCodeforces: prefs.notifyCodeforces !== undefined ? prefs.notifyCodeforces : true,
+        notifyCodechef: prefs.notifyCodechef !== undefined ? prefs.notifyCodechef : true,
+        notifyLeetcode: prefs.notifyLeetcode !== undefined ? prefs.notifyLeetcode : true
       });
     }
   }, [preferences]);
@@ -100,9 +103,11 @@ export default function NotificationSettings() {
   // Handle form submission
   const handleSubmit = () => {
     savePreferences.mutate({
-      emailEnabled: formState.emailEnabled,
-      notifyBefore: formState.notifyBefore,
-      favoriteContestsOnly: formState.favoriteContestsOnly
+      emailNotifications: formState.emailNotifications,
+      notificationTiming: formState.notificationTiming,
+      notifyCodeforces: formState.notifyCodeforces,
+      notifyCodechef: formState.notifyCodechef,
+      notifyLeetcode: formState.notifyLeetcode
     });
   };
 
@@ -110,34 +115,23 @@ export default function NotificationSettings() {
   const handleEmailToggle = (checked: boolean) => {
     setFormState(prev => ({
       ...prev,
-      emailEnabled: checked
+      emailNotifications: checked
     }));
   };
 
   // Handle timing selection
-  const toggleNotificationTiming = (timing: NotificationTiming) => {
-    setFormState(prev => {
-      const timings = [...prev.notifyBefore];
-      
-      if (timings.includes(timing)) {
-        return {
-          ...prev,
-          notifyBefore: timings.filter(t => t !== timing)
-        };
-      } else {
-        return {
-          ...prev,
-          notifyBefore: [...timings, timing]
-        };
-      }
-    });
-  };
-
-  // Handle favorite contests only toggle
-  const handleFavoriteOnlyToggle = (checked: boolean) => {
+  const handleTimingChange = (timing: NotificationTiming) => {
     setFormState(prev => ({
       ...prev,
-      favoriteContestsOnly: checked
+      notificationTiming: timing
+    }));
+  };
+
+  // Handle platform toggle
+  const handlePlatformToggle = (platform: 'codeforces' | 'codechef' | 'leetcode', checked: boolean) => {
+    setFormState(prev => ({
+      ...prev,
+      [`notify${platform.charAt(0).toUpperCase() + platform.slice(1)}`]: checked
     }));
   };
 
@@ -164,37 +158,58 @@ export default function NotificationSettings() {
               </p>
             </div>
             <Switch 
-              checked={formState.emailEnabled} 
+              checked={formState.emailNotifications} 
               onCheckedChange={handleEmailToggle} 
               id="email-notifications"
             />
           </div>
 
-          {formState.emailEnabled && (
+          {formState.emailNotifications && (
             <div className="space-y-4 mt-4 pl-2 border-l-2 border-primary/20 py-2">
               <div>
                 <Label className="text-base">When to notify?</Label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                <RadioGroup 
+                  value={formState.notificationTiming}
+                  onValueChange={(value) => handleTimingChange(value as NotificationTiming)}
+                  className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2"
+                >
                   {Object.entries(timingOptions).map(([timing, label]) => (
                     <div key={timing} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={`timing-${timing}`} 
-                        checked={formState.notifyBefore.includes(timing)} 
-                        onCheckedChange={() => toggleNotificationTiming(timing as NotificationTiming)} 
-                      />
+                      <RadioGroupItem value={timing} id={`timing-${timing}`} />
                       <Label htmlFor={`timing-${timing}`}>{label}</Label>
                     </div>
                   ))}
-                </div>
+                </RadioGroup>
               </div>
               
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="favorite-only" 
-                  checked={formState.favoriteContestsOnly} 
-                  onCheckedChange={handleFavoriteOnlyToggle} 
-                />
-                <Label htmlFor="favorite-only">Only notify for favorite contests</Label>
+              <div className="mt-6">
+                <Label className="text-base">Platforms to notify about</Label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="notify-codeforces" 
+                      checked={formState.notifyCodeforces}
+                      onCheckedChange={(checked) => handlePlatformToggle('codeforces', !!checked)}
+                    />
+                    <Label htmlFor="notify-codeforces">Codeforces</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="notify-codechef" 
+                      checked={formState.notifyCodechef}
+                      onCheckedChange={(checked) => handlePlatformToggle('codechef', !!checked)}
+                    />
+                    <Label htmlFor="notify-codechef">CodeChef</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="notify-leetcode" 
+                      checked={formState.notifyLeetcode}
+                      onCheckedChange={(checked) => handlePlatformToggle('leetcode', !!checked)}
+                    />
+                    <Label htmlFor="notify-leetcode">LeetCode</Label>
+                  </div>
+                </div>
               </div>
             </div>
           )}
