@@ -182,12 +182,12 @@ export default function ContestTable({ contests, type }: ContestTableProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className={`${reminderStatuses[contest.id] ? 'text-primary-700' : 'text-gray-500'} hover:text-primary-700 mr-4`}
+                      className={`${isAuthenticated && reminderStatuses[contest.id] ? 'text-primary-700' : 'text-gray-500'} hover:text-primary-700 mr-4`}
                       onClick={() => toggleReminder(contest.id)}
                       disabled={remindingContestId === contest.id}
                       title={reminderStatuses[contest.id] ? "Remove reminder" : "Set reminder"}
                     >
-                      {reminderStatuses[contest.id] ? (
+                      {isAuthenticated && reminderStatuses[contest.id] ? (
                         <Bell className="h-5 w-5 fill-primary-500" />
                       ) : (
                         <BellOff className="h-5 w-5" />

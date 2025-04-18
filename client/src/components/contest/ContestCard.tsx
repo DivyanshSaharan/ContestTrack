@@ -21,16 +21,18 @@ export default function ContestCard({ contest, status }: ContestCardProps) {
   const { isAuthenticated, user } = useAuth();
   const { toast } = useToast();
   const [isReminding, setIsReminding] = useState(false);
-  const [hasReminder, setHasReminder] = useState(false);
+  // const [hasReminder, setHasReminder] = useState(false);
 
   // Calculate countdown or time elapsed
   const { timeDisplay, percentComplete } = useCountdown(
-    new Date(contest.startTime), 
+    new Date(contest.startTime),
     new Date(contest.endTime)
   );
-  
+
+
+
   // Fetch contest reminder status for this user and contest
-  const { data: reminderData } = useQuery({
+  const { data: reminderData, refetch } = useQuery({
     queryKey: ['/api/contest-reminders', contest.id],
     queryFn: async () => {
       if (!isAuthenticated || !user) return null;
@@ -44,16 +46,23 @@ export default function ContestCard({ contest, status }: ContestCardProps) {
     },
     enabled: isAuthenticated && !!user
   });
-  
-  // Update the reminder state when data changes
+
   useEffect(() => {
-    if (reminderData && reminderData.hasReminder) {
-      setHasReminder(true);
-    } else {
-      setHasReminder(false);
+    if (isAuthenticated && user) {
+      refetch();
     }
-  }, [reminderData]);
-  
+  }, [isAuthenticated, user, refetch]);
+
+
+  // Update the reminder state when data changes
+  // useEffect(() => {
+  //   if (reminderData && reminderData.hasReminder) {
+  //     setHasReminder(true);
+  //   } else {
+  //     setHasReminder(false);
+  //   }
+  // }, [reminderData]);
+
   // Get platform icon URL
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
@@ -67,7 +76,7 @@ export default function ContestCard({ contest, status }: ContestCardProps) {
         return '';
     }
   };
-  
+
   // Get status badge color
   const getStatusBadge = (status: ContestStatus) => {
     switch (status) {
@@ -81,7 +90,7 @@ export default function ContestCard({ contest, status }: ContestCardProps) {
         return { color: "bg-gray-100 text-gray-800", text: "Ended" };
     }
   };
-  
+
   // Toggle reminder for contest
   const toggleReminder = async () => {
     if (!isAuthenticated) {
@@ -92,32 +101,31 @@ export default function ContestCard({ contest, status }: ContestCardProps) {
       });
       return;
     }
-    
+
     try {
       setIsReminding(true);
-      
-      if (hasReminder) {
-        // Remove reminder
+
+      if (reminderData?.hasReminder) {
         await apiRequest('DELETE', `/api/contest-reminders/${contest.id}`);
-        setHasReminder(false);
         toast({
           title: "Reminder removed",
           description: `You won't be notified for ${contest.name}`,
           variant: "default",
         });
       } else {
-        // Add reminder
         await apiRequest('POST', '/api/contest-reminders', { contestId: contest.id });
-        setHasReminder(true);
         toast({
           title: "Reminder set",
           description: `You'll be notified before ${contest.name} starts`,
           variant: "default",
         });
       }
+
+      // ✅ Refetch from backend to update reminderData
+      await refetch();
     } catch (error) {
       toast({
-        title: hasReminder ? "Failed to remove reminder" : "Failed to set reminder",
+        title: reminderData?.hasReminder ? "Failed to remove reminder" : "Failed to set reminder",
         description: "An error occurred. Please try again.",
         variant: "destructive",
       });
@@ -126,9 +134,10 @@ export default function ContestCard({ contest, status }: ContestCardProps) {
       setIsReminding(false);
     }
   };
-  
+
+
   const badge = getStatusBadge(status);
-  
+
   return (
     <div className={`bg-white rounded-lg border ${status === 'live' ? 'border-green-200' : status === 'soon' ? 'border-orange-100' : 'border-gray-200'} shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200`}>
       <div className="p-4">
@@ -142,7 +151,7 @@ export default function ContestCard({ contest, status }: ContestCardProps) {
           </div>
           <span className={`${badge.color} text-xs font-medium px-2.5 py-0.5 rounded`}>{badge.text}</span>
         </div>
-        
+
         {/* Time Information */}
         <div className="mb-3">
           <div className="text-xs text-neutral-500 mb-1">
@@ -152,7 +161,7 @@ export default function ContestCard({ contest, status }: ContestCardProps) {
             {status === 'live' || status === 'past' ? formatDate(contest.startTime) : timeDisplay}
           </div>
         </div>
-        
+
         {/* Duration and Progress (for live contests) */}
         {status === 'live' && (
           <div className="mb-4">
@@ -163,7 +172,7 @@ export default function ContestCard({ contest, status }: ContestCardProps) {
             <Progress value={percentComplete} className="h-2 bg-gray-200" />
           </div>
         )}
-        
+
         {/* Date and Duration (for upcoming contests) */}
         {(status === 'soon' || status === 'upcoming') && (
           <div className="flex justify-between mb-4">
@@ -177,24 +186,25 @@ export default function ContestCard({ contest, status }: ContestCardProps) {
             </div>
           </div>
         )}
-        
+
         {/* Actions */}
         <div className="flex justify-between">
           {status !== 'past' && status !== 'live' ? (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className={`${hasReminder ? 'text-primary-700' : 'text-gray-500'} hover:text-primary-800 text-sm font-medium flex items-center p-0`}
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={toggleReminder}
               disabled={isReminding}
-              title={hasReminder ? "Remove reminder" : "Set reminder"}
+              title={reminderData?.hasReminder ? "Remove reminder" : "Set reminder"}
+              className={`flex items-center p-0 text-sm font-medium hover:text-primary-800 ${isAuthenticated && reminderData?.hasReminder ? 'text-primary-700' : 'text-gray-500'
+                }`}
             >
-              {hasReminder ? (
-                <Bell className="h-5 w-5 mr-1 fill-primary-500" />
+              {isAuthenticated && reminderData?.hasReminder ? (
+                <Bell className="h-5 w-5 mr-1 text-primary-700" />
               ) : (
-                <BellOff className="h-5 w-5 mr-1" />
+                <BellOff className="h-5 w-5 mr-1 text-gray-500" />
               )}
-              {hasReminder ? "Notifying" : "Notify me"}
+              {isAuthenticated && reminderData?.hasReminder ? "Notifying" : "Notify me"}
             </Button>
           ) : (
             <Button
@@ -205,17 +215,18 @@ export default function ContestCard({ contest, status }: ContestCardProps) {
               View Details
             </Button>
           )}
-          
-          <a 
-            href={contest.url} 
-            target="_blank" 
-            rel="noopener noreferrer" 
+
+          <a
+            href={contest.url}
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700"
           >
             {status === 'live' ? 'Join Now' : 'View Details'}
             <ExternalLink className="h-4 w-4 ml-1" />
           </a>
         </div>
+
       </div>
     </div>
   );

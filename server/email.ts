@@ -65,7 +65,10 @@ export async function sendContestNotificationEmail(
       minute: '2-digit',
       timeZoneName: 'short'
     });
-
+    if (!user.email) {
+      console.error(`User ${user.id} has no email address defined.`);
+      return false;
+    }
     // Create the email content
     const mailOptions = {
       from: process.env.EMAIL_FROM || 'CodeContestTracker <noreply@codecontesttracker.com>',
@@ -123,7 +126,7 @@ export async function processContestNotifications() {
     const timeUntilStart = contestStartTime.getTime() - now.getTime();
     
     // Get all users with notification preferences
-    const users = Array.from((await storage.getAllContests()).values());
+    const users = Array.from((await storage.getAllUsers()).values());
     
     for (const user of users) {
       try {
