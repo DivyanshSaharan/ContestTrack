@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Bell, BellOff, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-
+import Codeforces from "@/assets/Codeforces.png";
 interface ContestTableProps {
   contests: Contest[];
   type: "upcoming" | "past";
@@ -56,7 +56,7 @@ export default function ContestTable({ contests, type }: ContestTableProps) {
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
       case 'codeforces':
-        return 'https://codeforces.org/favicon.ico';
+        return Codeforces;
       case 'codechef':
         return 'https://www.codechef.com/favicon.ico';
       case 'leetcode':

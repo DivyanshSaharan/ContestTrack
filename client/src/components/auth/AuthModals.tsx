@@ -148,9 +148,6 @@ export function AuthModals({
           <DialogHeader>
             <div className="flex justify-between items-center mb-4">
               <DialogTitle className="text-xl font-bold text-gray-900">Log In</DialogTitle>
-              <Button variant="ghost" size="icon" onClick={onCloseLogin} className="text-gray-400 hover:text-gray-500">
-                <X className="h-6 w-6" />
-              </Button>
             </div>
             <DialogDescription>
               Sign in to your account to track contests and receive notifications
@@ -263,9 +260,6 @@ export function AuthModals({
           <DialogHeader>
             <div className="flex justify-between items-center mb-4">
               <DialogTitle className="text-xl font-bold text-gray-900">Sign Up</DialogTitle>
-              <Button variant="ghost" size="icon" onClick={onCloseSignup} className="text-gray-400 hover:text-gray-500">
-                <X className="h-6 w-6" />
-              </Button>
             </div>
             <DialogDescription>
               Create a new account to track programming contests

@@ -9,7 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";
-
+import Codeforces from "@/assets/Codeforces.png";
 type ContestStatus = "live" | "soon" | "upcoming" | "past";
 
 interface ContestCardProps {
@@ -67,7 +67,7 @@ export default function ContestCard({ contest, status }: ContestCardProps) {
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
       case 'codeforces':
-        return 'https://codeforces.org/favicon.ico';
+        return Codeforces;
       case 'codechef':
         return 'https://www.codechef.com/favicon.ico';
       case 'leetcode':
