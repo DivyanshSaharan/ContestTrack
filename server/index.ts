@@ -3,13 +3,15 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
 import session from "express-session";
-
+import dotenv from "dotenv";
+import { dot } from "node:test/reporters";
+dotenv.config();
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use(cors({
-  origin: ["http://localhost:3000","https://CodeTrack-frontend.onrender.com"], // ✅ adjust as needed
+  origin: "http://localhost:3000", // ✅ adjust as needed
   credentials: true,
 }));
 
@@ -51,7 +53,7 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    // throw err;
+    throw err;
   });
 
   // importantly only setup vite in development and after
@@ -66,12 +68,12 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  // Use dynamic port from environment or fallback to 5000
-const port = parseInt(process.env.PORT || "5000", 10);
+  const port = Number(process.env.PORT) || 5000;
 
 server.listen({ port, host: "0.0.0.0" }, () => {
   log(`serving on port ${port}`);
 });
 
+  
   
 })();
