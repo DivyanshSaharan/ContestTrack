@@ -9,7 +9,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 app.use(cors({
-  origin: "http://localhost:3000", // ✅ adjust as needed
+  origin: ["http://localhost:3000","https://CodeTrack-frontend.onrender.com"], // ✅ adjust as needed
   credentials: true,
 }));
 
@@ -69,7 +69,7 @@ app.use((req, res, next) => {
   const port = 5000;
   server.listen({
     port,
-    host: "127.0.0.1", // or "0.0.0.0"
+    host: "0.0.0.0", // or "0.0.0.0"
   }, () => {
     log(`serving on port ${port}`);
   });
